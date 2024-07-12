@@ -168,5 +168,18 @@ export const acceptUserInvite = async (req, res, next) => {
     } catch (error) {
         next(error)
     }
+}
 
+
+export const declineFriendRequest = async (req, res, next) => {
+    try {
+        const { invitingUserId } = req.params;
+        const invitedUserId = req.user.userId;
+
+        if (!invitingUserId || !invitedUserId || (invitingUserId === invitedUserId)) {
+            return res.status(400).json({ message: 'Boooo' });
+        }
+    } catch (error) {
+
+    }
 }
