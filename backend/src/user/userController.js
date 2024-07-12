@@ -4,6 +4,7 @@ import envConfig from '../config/envConfig.js';
 import User from './userModal.js';
 import createHttpError from '../utils/httpError.js';
 import Notification from '../notification/notificationModal.js';
+import Group from '../group/groupModal.js';
 
 // User registration
 export const registerUser = async (req, res, next) => {
@@ -69,11 +70,21 @@ export const inviteUserToChat = async (req, res, next) => {
 
         console.log("user rq", req.user)
 
-        const invitedUser = await User.findById(userId);
+        // const invitedUser = await User.findById(userId);
+        const [invitingUser, invitedUser] = await Promise.all([
+            User.findById(invitingUserId),
+            User.findById(userId),
+        ])
         if (!invitedUser) {
             // return res.status(404).json({message: "Couldnt find the user"})
             const error = createHttpError(404, "No user")
             next(error)
+        }
+
+        let alreadyInvited = invitedUser.invitations.includes(invitingUserId);
+
+        if (alreadyInvited) {
+            return res.status(400).json({ message: 'User is already invited' });
         }
 
         const notification = await Notification.create({
@@ -85,8 +96,11 @@ export const inviteUserToChat = async (req, res, next) => {
         })
 
         invitedUser.notifications.push(notification._id)
+        invitedUser.invitations.push(invitingUserId)
+        invitingUser.invited.push(invitedUser._id)
 
         await invitedUser.save();
+        await invitingUser.save()
 
         res.status(201).json({
             message: "User invited sucessfully",
@@ -100,6 +114,59 @@ export const inviteUserToChat = async (req, res, next) => {
 }
 
 
+
 export const acceptUserInvite = async (req, res, next) => {
+
+    try {
+        const { invitingUserId } = req.params;
+        const invitedUserId = req.user.userId;
+
+        if (!invitingUserId || !invitedUserId || (invitingUserId === invitedUserId)) {
+            return res.status(400).json({ message: 'Boooo' });
+        }
+
+        const [invitingUser, invitedUser] = await Promise.all([
+            User.findById(invitingUserId),
+            User.findById(invitedUserId),
+        ])
+
+        const alreadyFriend = invitedUser.friends.includes(invitingUserId);
+
+        if (alreadyFriend) {
+            return res.status(400).json({ message: 'Already friend' });
+
+        }
+
+        const notification = await Notification.create({
+            type: "message",
+            message: `${invitedUser.username} has accepted your friend request`,
+            sender: invitedUserId,
+            user: invitingUserId,
+            status: 'accepted',
+        })
+
+        const group = await Group.create({
+            name: `${invitingUserId}${invitedUserId}`,
+            members: [invitingUserId, invitedUserId]
+        })
+
+        invitingUser.friends.push(invitedUser._id)
+        invitedUser.friends.push(invitingUser._id)
+        invitedUser.invitations.pop(invitingUserId)
+        invitingUser.notifications.push(notification._id)
+
+        await Promise.all([
+            invitingUser.save(),
+            invitedUser.save(),
+        ])
+
+        res.status(200).json({
+            notification,
+            invitedUser,
+            invitingUser
+        })
+    } catch (error) {
+        next(error)
+    }
 
 }

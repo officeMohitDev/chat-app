@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    invitations: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    invited: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     groups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     notifications: [{
@@ -28,6 +30,6 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 })
 
-const User = mongoose.model("User", userSchema)
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 export default User
