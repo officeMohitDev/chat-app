@@ -154,6 +154,7 @@ export const acceptUserInvite = async (req, res, next) => {
         invitedUser.friends.push(invitingUser._id)
         invitedUser.invitations.pop(invitingUserId)
         invitingUser.notifications.push(notification._id)
+        invitingUser.invited.pop(invitedUser._id)
 
         await Promise.all([
             invitingUser.save(),
@@ -179,7 +180,29 @@ export const declineFriendRequest = async (req, res, next) => {
         if (!invitingUserId || !invitedUserId || (invitingUserId === invitedUserId)) {
             return res.status(400).json({ message: 'Boooo' });
         }
-    } catch (error) {
 
+        const [invitingUser, invitedUser] = await Promise.all([
+            User.findById(invitingUserId),
+            User.findById(invitedUserId),
+        ])
+
+        const alreadyFriend = invitedUser.friends.includes(invitingUserId);
+
+        if (alreadyFriend) {
+            return res.status(400).json({ message: 'Already friend' });
+
+        }
+
+        invitedUser.invitations.pop(invitingUser._id);
+        invitingUser.invited.pop(invitedUser._id);
+
+        res.status(200).json({
+            message: "Request Declines!",
+            invitedUser,
+            invitingUser
+        })
+
+    } catch (error) {
+        next(error)
     }
 }
