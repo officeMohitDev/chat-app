@@ -17,7 +17,7 @@ const Login = () => {
         e.preventDefault();
         setIsLoading(true)
         try {
-            const res = await axios.post('http://localhost:5555/user/login', {
+            const res = await axios.post('http://localhost:5555/api/user/login', {
                 email,
                 password,
             });

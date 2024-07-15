@@ -1,12 +1,9 @@
 import { useAppContext } from '../context/AppContext'
 import Sidebar from '../components/shared/Sidebar';
 import Navbar from '../components/shared/Navbar';
-import { Outlet } from 'react-router-dom';
 import MessageInput from '../components/chat/MessageInput';
 import Header from '../components/shared/Header';
 const SharedLayout = () => {
-    const { userData } = useAppContext();
-    console.log("userdata", userData)
     return (
         <>
             <Header />

@@ -16,7 +16,7 @@ export default async function validateToken(req, res, next) {
 
     jwt.verify(token, envConfig.secret, (error, decoded) => {
         if (error) {
-            return res.status(401).json({ message: 'Token is expired or invalid' });
+            return res.status(404).json({ message: 'Token is expired or invalid' });
         }
 
         req.user = decoded

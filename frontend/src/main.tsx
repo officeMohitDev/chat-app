@@ -6,10 +6,9 @@ import { Toaster } from 'sonner'
 import { ContextProvider } from './context/AppContext.tsx'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ContextProvider>
-      <App />
-    </ContextProvider>
+  <ContextProvider>
+    <App />
     <Toaster />
-  </React.StrictMode>,
+  </ContextProvider>
+
 )

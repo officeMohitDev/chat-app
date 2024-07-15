@@ -12,7 +12,7 @@ app.get("/", (req, res) => {
     res.send("Hello Mom!")
 })
 
-app.use("/user", userRouter)
+app.use("/api/user", userRouter)
 
 app.use(globalErrorHandler)
 

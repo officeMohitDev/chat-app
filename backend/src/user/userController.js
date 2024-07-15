@@ -5,6 +5,7 @@ import User from './userModal.js';
 import createHttpError from '../utils/httpError.js';
 import Notification from '../notification/notificationModal.js';
 import Group from '../group/groupModal.js';
+import { getReceiverSocketId, io } from '../socket.js';
 
 // User registration
 export const registerUser = async (req, res, next) => {
@@ -91,9 +92,15 @@ export const inviteUserToChat = async (req, res, next) => {
             type: "friendRequest",
             user: userId,
             sender: invitingUserId,
-            message: `Invited you to chat`,
+            message: `${invitingUser.username} Invited you to chat`,
             status: "unread"
         })
+
+        let socketId = getReceiverSocketId(userId);
+
+        if (socketId) {
+            io.to(socketId).emit("alert", notification)
+        }
 
         invitedUser.notifications.push(notification._id)
         invitedUser.invitations.push(invitingUserId)
@@ -116,7 +123,6 @@ export const inviteUserToChat = async (req, res, next) => {
 
 
 export const acceptUserInvite = async (req, res, next) => {
-
     try {
         const { invitingUserId } = req.params;
         const invitedUserId = req.user.userId;
@@ -128,48 +134,70 @@ export const acceptUserInvite = async (req, res, next) => {
         const [invitingUser, invitedUser] = await Promise.all([
             User.findById(invitingUserId),
             User.findById(invitedUserId),
-        ])
+        ]);
+
+        if (!invitingUser || !invitedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
         const alreadyFriend = invitedUser.friends.includes(invitingUserId);
 
         if (alreadyFriend) {
-            return res.status(400).json({ message: 'Already friend' });
-
+            return res.status(400).json({ message: 'Already friends' });
         }
 
+        // Create notification
         const notification = await Notification.create({
             type: "message",
             message: `${invitedUser.username} has accepted your friend request`,
             sender: invitedUserId,
             user: invitingUserId,
             status: 'accepted',
-        })
+        });
 
+        // Create a group for the two friends
         const group = await Group.create({
             name: `${invitingUserId}${invitedUserId}`,
             members: [invitingUserId, invitedUserId]
-        })
+        });
 
-        invitingUser.friends.push(invitedUser._id)
-        invitedUser.friends.push(invitingUser._id)
-        invitedUser.invitations.pop(invitingUserId)
-        invitingUser.notifications.push(notification._id)
-        invitingUser.invited.pop(invitedUser._id)
+        // Update friends lists and notifications
+        invitingUser.friends.push(invitedUser._id);
+        invitedUser.friends.push(invitingUser._id);
+        invitedUser.invitations = invitedUser.invitations.filter(id => id.toString() !== invitingUserId);
+        invitingUser.notifications.push(notification._id);
+        invitingUser.invited = invitingUser.invited.filter(id => id.toString() !== invitedUser._id.toString());
 
+        // Emit socket events
+        const invitingUserSocketId = getReceiverSocketId(invitingUserId);
+        const invitedUserSocketId = getReceiverSocketId(invitedUserId);
+
+        io.to(invitingUserSocketId).emit("alert", notification);
+
+        if (invitingUserSocketId) {
+            io.to(invitingUserSocketId).emit("friend", invitedUser);
+        }
+
+        if (invitedUserSocketId) {
+            io.to(invitedUserSocketId).emit("friend", invitingUser);
+        }
+
+        // Save updates to users
         await Promise.all([
             invitingUser.save(),
             invitedUser.save(),
-        ])
+        ]);
 
+        // Send response
         res.status(200).json({
             notification,
             invitedUser,
             invitingUser
-        })
+        });
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
 
 
 export const declineFriendRequest = async (req, res, next) => {
@@ -232,7 +260,7 @@ export const currentUser = async (req, res) => {
 
     try {
         const user = await User.findById(userId)
-            .populate('friends invitations invited groups notifications');
+            .populate('friends invitations invited groups notifications')
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -243,3 +271,5 @@ export const currentUser = async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
+
+}
