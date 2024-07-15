@@ -210,10 +210,13 @@ export const declineFriendRequest = async (req, res, next) => {
 
 export const searchUser = async (req, res) => {
     const { username } = req.query;
-
+    const loggedInUserId = req.user.userId
     try {
-        // Query the database for users with matching username
-        const users = await User.find({ username: { $regex: new RegExp(username, 'i') } });
+        // Query the database for users with matching username, excluding the logged-in user
+        const users = await User.find({
+            _id: { $ne: loggedInUserId }, // Exclude the logged-in user
+            username: { $regex: new RegExp(username, 'i') }
+        });
 
         res.json(users);
     } catch (err) {
@@ -221,5 +224,22 @@ export const searchUser = async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
-
 }
+
+
+export const currentUser = async (req, res) => {
+    const userId = req.user.userId; // Assuming req.user contains the logged-in user's ID
+
+    try {
+        const user = await User.findById(userId)
+            .populate('friends invitations invited groups notifications');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json(user);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
