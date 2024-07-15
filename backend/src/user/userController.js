@@ -206,3 +206,20 @@ export const declineFriendRequest = async (req, res, next) => {
         next(error)
     }
 }
+
+
+export const searchUser = async (req, res) => {
+    const { username } = req.query;
+
+    try {
+        // Query the database for users with matching username
+        const users = await User.find({ username: { $regex: new RegExp(username, 'i') } });
+
+        res.json(users);
+    } catch (err) {
+        // Handle errors
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+
+}
