@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { FC, FormEvent, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Register = () => {
     const [username, setUsername] = useState('');
@@ -9,12 +10,13 @@ const Register = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false)
+    const navigate = useNavigate()
 
-    const handleRegister = async (e) => {
+    const handleRegister = async (e: FormEvent) => {
         e.preventDefault();
         setIsLoading(true)
         try {
-            const response = await axios.post('http://localhost:5555/user/register', {
+            await axios.post('http://localhost:5555/user/register', {
                 username,
                 email,
                 password,
@@ -23,7 +25,8 @@ const Register = () => {
             toast.success("Registration successful!'")
             setIsLoading(false)
             setError('');
-        } catch (error: unknown) {
+            navigate("/login")
+        } catch (error: any) {
             setIsLoading(false)
             console.log(error)
             setError(error?.response?.data?.message || 'Registration failed. Please try again.');
@@ -156,6 +159,9 @@ const Register = () => {
                     </form>
                     {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
                     {success && <p className="mt-4 text-sm text-green-500">{success}</p>}
+                    <p>
+                        Dont have account ? <Link to={"/login"}>Login</Link>
+                    </p>
                 </div>
             </div>
         </div>
